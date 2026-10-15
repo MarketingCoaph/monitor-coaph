@@ -8,7 +8,8 @@ function analyze(string $text,array $entities,int $termWeight,string $discoveryT
  $operation=str_contains($norm,'operacao coaptacao');
  $invest=(bool)preg_match('/investiga|operacao|policia federal|\bpf\b|apuracao|fraude|desvio|mandado|prisao|preso|judicial|justica/',$norm);
  $health=(bool)preg_match('/saude|hospital|medic|cooperativa|recurso publico/',$norm);$person=false;
- $fingerprint=$operation||(preg_match('/bunker|sala do dinheiro/',$norm)&&preg_match('/80 empresas|empresas fantasmas/',$norm))||(str_contains($norm,'contador')&&preg_match('/345 mil|437 mil|dinheiro em especie/',$norm))||($invest&&$health&&preg_match('/ceara|cearense/',$norm));
+ $clues=0;foreach(['/saude|hospital|medic/','/ceara|cearense|fortaleza|paraiba/','/policia federal|\bpf\b/','/\bcgu\b/','/80 empresas|empresas fantasmas/','/bunker|sala do dinheiro/','/contador|dinheiro em especie/','/1 bilhao|1,5 bilhao|1,8 bilhao/','/5 pris|24 mandados|38 imoveis|82 veiculos/','/recursos publicos/']as$pattern)if(preg_match($pattern,$norm))$clues++;
+ $fingerprint=$operation||(preg_match('/bunker|sala do dinheiro/',$norm)&&preg_match('/80 empresas|empresas fantasmas/',$norm))||(str_contains($norm,'contador')&&preg_match('/345 mil|437 mil|dinheiro em especie/',$norm))||($invest&&$clues>=3);
  foreach($entities as$e){if($e['normalized_name']!==''&&str_contains($norm,$e['normalized_name'])){$matched[]=$e['name'];$entityScore=max($entityScore,(int)$e['relevance_weight']);if($e['type']==='pessoa')$person=true;}}
  $score=$entityScore+(int)round($termWeight/2);if($invest)$score+=15;if($health)$score+=8;if($coaph&&$invest)$score+=30;if($person&&$invest&&$health)$score+=20;if($operation)$score+=45;if($fingerprint)$score+=25;if(count(array_unique($matched))>=2)$score+=10;
  // Regra de contenção: mencionar COAPH ou uma pessoa, sem contexto da investigação atual,
