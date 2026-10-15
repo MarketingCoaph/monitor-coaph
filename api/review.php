@@ -1,0 +1,1 @@
+<?php require __DIR__.'/bootstrap.php';respond(db()->query("SELECT * FROM news WHERE relevance_status IN ('possibly_related','manual_review') ORDER BY relevance_score DESC,discovered_at DESC")->fetchAll());

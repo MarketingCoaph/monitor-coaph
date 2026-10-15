@@ -1,0 +1,1 @@
+<?php require __DIR__.'/bootstrap.php';$d=body();requireFields($d,['id']);$st=db()->prepare('UPDATE news SET is_read=?,is_new=0 WHERE id=?');$st->execute([(int)($d['is_read']??1),(int)$d['id']]);respond(['updated'=>true]);
