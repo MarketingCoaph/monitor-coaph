@@ -5,15 +5,17 @@ function parseFeed(string $xml):array{libxml_use_internal_errors(true);$s=simple
 function analyze(string $text,array $entities,int $termWeight,string $discoveryTerm=''):array{
  $norm=mb_strtolower(iconv('UTF-8','ASCII//TRANSLIT',$text)?:$text);$matched=[];$entityScore=0;
  $coaph=str_contains($norm,'coaph')||str_contains($norm,'cooperativa de atendimento pre e hospitalar');
+ $operation=str_contains($norm,'operacao coaptacao');
  $invest=(bool)preg_match('/investiga|operacao|policia federal|\bpf\b|apuracao|fraude|desvio|mandado|prisao|preso|judicial|justica/',$norm);
  $health=(bool)preg_match('/saude|hospital|medic|cooperativa|recurso publico/',$norm);$person=false;
+ $fingerprint=$operation||(preg_match('/bunker|sala do dinheiro/',$norm)&&preg_match('/80 empresas|empresas fantasmas/',$norm))||(str_contains($norm,'contador')&&preg_match('/345 mil|437 mil|dinheiro em especie/',$norm))||($invest&&$health&&preg_match('/ceara|cearense/',$norm));
  foreach($entities as$e){if($e['normalized_name']!==''&&str_contains($norm,$e['normalized_name'])){$matched[]=$e['name'];$entityScore=max($entityScore,(int)$e['relevance_weight']);if($e['type']==='pessoa')$person=true;}}
- $score=$entityScore+(int)round($termWeight/2);if($invest)$score+=15;if($health)$score+=8;if($coaph&&$invest)$score+=30;if($person&&$invest&&$health)$score+=20;if(count(array_unique($matched))>=2)$score+=10;
+ $score=$entityScore+(int)round($termWeight/2);if($invest)$score+=15;if($health)$score+=8;if($coaph&&$invest)$score+=30;if($person&&$invest&&$health)$score+=20;if($operation)$score+=45;if($fingerprint)$score+=25;if(count(array_unique($matched))>=2)$score+=10;
  // Regra de contenção: mencionar COAPH ou uma pessoa, sem contexto da investigação atual,
  // nunca é suficiente para entrar no feed principal nem na fila de revisão.
- if(!$invest){$score=min(39,$score);$status='unrelated';}
+ if(!$invest||(!$coaph&&!$person&&!$fingerprint)){$score=min(39,$score);$status='unrelated';}
  else{$score=min(100,max(0,$score));$status=$score>=70?'related':($score>=40?'possibly_related':'unrelated');}
- $labels=[];if($coaph)$labels[]='COAPH';if($person)$labels[]='pessoa ligada ao caso';if($invest)$labels[]='contexto investigativo';if($health)$labels[]='setor de saúde';
+ $labels=[];if($coaph)$labels[]='COAPH';if($operation)$labels[]='Operação Coaptação';if($person)$labels[]='pessoa ligada ao caso';if($fingerprint&&!$operation)$labels[]='padrões específicos do caso';if($invest)$labels[]='contexto investigativo';if($health)$labels[]='setor de saúde';
  $reason=($status==='related'?'Alta relevância: ':($status==='possibly_related'?'Possivelmente relacionada: ':'Baixa relevância: ')).($labels?implode(', ',$labels):'sem combinação contextual suficiente').($discoveryTerm!==''?"; encontrada pelo termo “$discoveryTerm”.":'.');return[$score,$status,$reason,array_values(array_unique($matched))];
 }
 function feedUrlForTerm(string $url,string $term,string $startDate):string{$p=parse_url($url);if(!$p||!str_contains(strtolower($p['host']??''),'news.google.'))return$url;parse_str($p['query']??'',$q);$q['q']='"'.$term.'" after:'.$startDate;$base=($p['scheme']??'https').'://'.$p['host'].($p['path']??'');return$base.'?'.http_build_query($q);}
