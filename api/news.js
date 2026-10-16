@@ -1,6 +1,7 @@
 import { supabaseAdmin, assertDb } from './_lib/supabase.js';
 import { allow, fail, send } from './_lib/http.js';
 import { isTrackedNews } from '../monitor/utils/tracking.js';
+import { deduplicateNews } from '../monitor/utils/deduplicate.js';
 
 export default async function handler(req, res) {
   if (!allow(req, res, ['GET'])) return;
@@ -17,6 +18,6 @@ export default async function handler(req, res) {
     if (req.query?.relevance) query = query.eq('relevance_status', String(req.query.relevance));
     const tracking = { terms: terms.map(row => row.term), entities };
     const items = assertDb(await query) || [];
-    send(res, { items: items.filter(item => isTrackedNews(item, tracking)), tracking });
+    send(res, { items: deduplicateNews(items.filter(item => isTrackedNews(item, tracking))), tracking });
   } catch (error) { fail(res, error); }
 }
