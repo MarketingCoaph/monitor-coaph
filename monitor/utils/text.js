@@ -4,9 +4,21 @@ export function normalizeText(value = '') {
 }
 
 export function decodeXml(value = '') {
-  const entities = text => text.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
+  const decodeEntities = text => text
+    .replace(/&nbsp;|&#160;|&#x0*a0;/gi, ' ')
+    .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&apos;|&#39;/gi, "'")
+    .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([\da-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
+  const entities = text => {
+    let decoded = String(text);
+    for (let i = 0; i < 3; i++) {
+      const next = decodeEntities(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+    return decoded;
+  };
   const decoded = entities(String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1'));
   return entities(decoded.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' '))
