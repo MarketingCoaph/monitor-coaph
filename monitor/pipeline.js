@@ -9,9 +9,9 @@ import { classify } from './classifier.js';
 import { LocalCandidateStore } from './store/localStore.js';
 
 export class MonitorPipeline {
-  constructor({ serperApiKey = '', store = new LocalCandidateStore() } = {}) {
+  constructor({ serperApiKey = '', store = new LocalCandidateStore(), loadConfig = null } = {}) {
     this.providers = { google: new GoogleNewsRSSProvider(), direct: new DirectRSSProvider(), serper: new SerperProvider(serperApiKey) };
-    this.cache = null; this.running = null; this.history = []; this.store = store; this.serperOffset = 0;
+    this.cache = null; this.running = null; this.history = []; this.store = store; this.loadConfig = loadConfig; this.serperOffset = 0;
   }
 
   async run({ force = false } = {}) {
@@ -23,13 +23,15 @@ export class MonitorPipeline {
 
   async execute() {
     const started = Date.now();
-    const queries = SEARCH_QUERIES.slice(0, MAX_QUERIES_PER_RUN);
+    const dynamic = this.loadConfig ? await this.loadConfig() : null;
+    const queries = (dynamic?.queries?.length ? dynamic.queries : SEARCH_QUERIES).slice(0, MAX_QUERIES_PER_RUN);
+    const directSources = dynamic?.sources?.length ? dynamic.sources : DIRECT_SOURCES;
     const jobs = [];
     for (const query of queries) {
       jobs.push({ provider: 'google_news_rss', query, promise: this.providers.google.search(query) });
     }
     if (this.providers.serper.enabled) {
-      const eligible = queries.filter(query => query.priority >= 80);
+      const eligible = queries;
       const selected = Array.from({ length: Math.min(MAX_SERPER_QUERIES_PER_RUN, eligible.length) }, (_, index) => eligible[(this.serperOffset + index) % eligible.length]);
       this.serperOffset = (this.serperOffset + selected.length) % eligible.length;
       let chain = Promise.resolve();
@@ -39,7 +41,7 @@ export class MonitorPipeline {
         jobs.push({ provider: 'serper', query, promise });
       }
     }
-    for (const source of DIRECT_SOURCES) jobs.push({ provider: 'direct_rss', source, promise: this.providers.direct.search(source) });
+    for (const source of directSources) jobs.push({ provider: 'direct_rss', source, promise: this.providers.direct.search(source) });
     const results = await Promise.allSettled(jobs.map(job => job.promise));
     const errors = [], queryRuns = [], candidates = [];
     results.forEach((result, index) => {

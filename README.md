@@ -1,77 +1,43 @@
 # Monitor de Notícias COAPH
 
-Painel privado em React/Vite com API PHP, MySQL, monitor RSS, classificação contextual, fila de revisão e histórico. Em produção o frontend é estático; não é necessário manter Node.js em execução.
+Painel React/Vite com funções serverless no Vercel e banco PostgreSQL no Supabase. O monitor consulta Google Notícias RSS, feeds diretos e Serper, classifica os resultados e grava o histórico no Supabase.
 
-## Requisitos
+## Arquitetura de produção
 
-- Node.js 20+ somente para desenvolvimento/build
-- PHP 8.1+ com extensões PDO MySQL, cURL, SimpleXML e mbstring
-- MySQL 8+ ou MariaDB 10.5+
+- Vercel: frontend, APIs em `api/*.js` e execução agendada.
+- Supabase: notícias, termos, entidades, fontes, revisões e histórico das varreduras.
+- Hostinger: cópia de contingência; não participa do funcionamento normal.
+- O site oficial `coaph.com.br` e o repositório `coaphoficial` não fazem parte deste projeto.
 
-## Instalação local (XAMPP)
+## Variáveis no Vercel
 
-1. No phpMyAdmin, importe `database.sql`.
-2. Copie `api/config.example.php` para `api/config.php` e informe as credenciais locais e uma `CRON_SECRET` longa.
-3. Execute `npm install`.
-4. Inicie o Apache e o MySQL no XAMPP.
-5. Para desenvolvimento, execute `npm run dev`. O Vite usa `/api` em `http://localhost:8080`; altere a porta em `vite.config.js` se o Apache usar outra.
-6. Para simular produção, execute `npm run build` e copie o conteúdo de `dist/` para a raiz pública, mantendo a pasta `api/` ao lado de `index.html`.
+Cadastre em Project Settings > Environment Variables (Production, Preview e Development):
 
-## Monitor e cron
-
-Teste pelo terminal:
-
-```bash
-php api/cron/monitor-news.php
+```text
+SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=CHAVE_SERVICE_ROLE
+SERPER_API_KEY=CHAVE_SERPER
+CRON_SECRET=SEGREDO_LONGO_E_ALEATORIO
+MONITOR_START_DATE=2026-10-08
 ```
 
-Na Hostinger, prefira o cron por linha de comando:
+Nunca use o prefixo `VITE_` na chave `service_role`: ela só pode existir no servidor.
 
-```bash
-/usr/bin/php /home/USUARIO/domains/DOMINIO/public_html/api/cron/monitor-news.php
-```
+## Desenvolvimento local
 
-Se precisar chamar por URL, use `https://DOMINIO/api/cron/monitor-news.php?key=SUA_CHAVE`. Sem a chave correta, a chamada HTTP é recusada. Uma frequência de 30 a 60 minutos costuma ser adequada.
+1. Execute `npm install`.
+2. Preencha `.env` com as mesmas variáveis.
+3. Use `npm run dev` para o frontend e `npm run monitor:test` para testar as fontes.
+4. Use `npm run build` antes de publicar.
 
-## Publicação na Hostinger
+O plugin local do Vite continua disponível como diagnóstico. As funções do Vercel são a API oficial de produção.
 
-1. Crie o banco e o usuário MySQL no painel da Hostinger.
-2. Importe `database.sql` no phpMyAdmin da hospedagem.
-3. Crie `api/config.php` a partir do exemplo com os dados reais.
-4. Rode `npm run build` localmente.
-5. Envie o conteúdo de `dist/`, `.htaccess` e a pasta `api/` para `public_html/`.
-6. Não envie `node_modules`. Confirme PHP 8.1+ e as extensões exigidas.
-7. Abra `/api/dashboard.php`: uma resposta JSON confirma a conexão. Depois abra o domínio.
-8. Cadastre ou ajuste feeds na seção Fontes e configure o cron.
+## Banco
 
-O `.htaccess` mantém as rotas do React ao atualizar a página e não redireciona `/api`.
+As migrações versionadas ficam em `supabase/migrations/`. Todas as tabelas públicas usam RLS e não concedem acesso a `anon` nem `authenticated`; somente as funções serverless, com `service_role`, acessam o banco.
 
-## RSS e classificação
+O script `scripts/migrate-hostinger-to-supabase.js` existe apenas para uma eventual nova sincronização de contingência. Ele lê a API antiga e nunca contém credenciais.
 
-Feeds RSS 2.0 e Atom são aceitos. A fonte Google Notícias para COAPH já é criada pelo SQL. A classificação combina entidades, respectivos pesos, termos e sinais investigativos. Itens duvidosos seguem para Revisar; palavras genéricas isoladas recebem peso baixo. A análise informa `metadata` quando somente os dados do feed foram usados.
+## Publicação
 
-## Testes e diagnóstico
-
-- `npm run build`: valida o frontend.
-- `php -l arquivo.php`: valida sintaxe PHP.
-- Erro 500 na API: confira `api/config.php`, credenciais, banco importado e extensões PHP.
-- Tela sem dados: abra a aba Rede do navegador e teste `/api/dashboard.php`.
-- Cron sem resultados: confira se cURL e SimpleXML estão ativos e se a origem permite acesso.
-- Rotas retornando 404: habilite `mod_rewrite` e `AllowOverride All` no Apache.
-- Para mensagens técnicas temporárias, defina `APP_ENV` como `development`; reverta para `production` ao publicar.
-
-## Segurança
-
-O `api/config.php` está ignorado pelo Git. Não inclua credenciais no React. As operações usam prepared statements. Para um painel verdadeiramente privado na internet, também proteja `public_html` com senha pelo painel da Hostinger ou implemente autenticação antes da publicação.
-
-## Motor multifonte local (transição para Supabase)
-
-O desenvolvimento local executa um pipeline modular com Google News RSS, RSS diretos e Serper. Google News e os feeds funcionam sem credenciais. Para ativar a Serper:
-
-1. Copie `.env.example` para `.env`.
-2. Preencha `SERPER_API_KEY` com a chave criada em `https://serper.dev`.
-3. Reinicie `INICIAR_MONITOR.cmd`.
-
-Execute `npm run monitor:test` para imprimir resultados brutos, candidatos únicos, duplicatas, classificação e falhas isoladas. A página **Monitoramento** mostra o mesmo diagnóstico e permite executar uma nova varredura.
-
-Até a migração para o Supabase, os candidatos e a última execução são preservados em `data/monitor-cache.json`, arquivo privado e ignorado pelo Git. Nenhuma chave privada deve ser prefixada com `VITE_`.
+O repositório correto é `MarketingCoaph/monitor-coaph`. Um push na branch configurada no projeto Vercel inicia a implantação automática. Antes de considerar a migração concluída, confirme `/api/dashboard` e `/api/news` no domínio do Vercel.
