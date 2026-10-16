@@ -19,6 +19,7 @@ const sourceNames = {
   'cn7.com.br': 'CN7',
   'coxinhanews.com.br': 'Coxinha News',
   'diariodonordeste.verdesmares.com.br': 'Diário do Nordeste',
+  'diario360.com.br': 'Diário 360 Notícias',
   'g1.globo.com': 'G1 Ceará',
   'gov.br': 'Governo Federal',
   'itaremadireto.com.br': 'Itarema Direto',
