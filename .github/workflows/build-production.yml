@@ -32,10 +32,16 @@ jobs:
 
       - name: Montar branch de produção
         run: |
-          mkdir -p publish/api
+          mkdir -p publish
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            ./ publish/
           cp -R dist/. publish/
-          cp .htaccess publish/.htaccess
-          rsync -a --exclude='config.php' api/ publish/api/
+          rm -f publish/api/config.php
 
       - name: Atualizar branch production
         env:
