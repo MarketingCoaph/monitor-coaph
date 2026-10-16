@@ -6,7 +6,7 @@ export default defineConfig({
   server:{
     proxy:{
       '/api':{
-        target:'https://imprensas.coaph.com.br',
+        target:process.env.API_PROXY_TARGET || 'http://localhost/monitor-coaph',
         changeOrigin:true,
         secure:true
       }

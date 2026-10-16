@@ -2,7 +2,7 @@
 require dirname(__DIR__).'/bootstrap.php';
 require dirname(__DIR__).'/lib/monitor.php';
 global $CONFIG;
-if(PHP_SAPI!=='cli'&&!hash_equals((string)$CONFIG['CRON_SECRET'],(string)($_GET['key']??'')))fail('Não autorizado',401);
+if(PHP_SAPI!=='cli'&&(empty($CONFIG['CRON_SECRET'])||!hash_equals((string)$CONFIG['CRON_SECRET'],(string)($_GET['key']??''))))fail('Não autorizado',401);
 $p=db();
 $sources=$p->query('SELECT * FROM sources WHERE active=1')->fetchAll();
 $terms=$p->query('SELECT * FROM search_terms WHERE active=1')->fetchAll();

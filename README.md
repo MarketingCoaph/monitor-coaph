@@ -1,5 +1,31 @@
 # Monitor de Notícias COAPH
 
+## Supabase / PostgreSQL
+
+A API suporta PostgreSQL (`DB_DRIVER=pgsql`) e mantém a configuração MySQL existente como alternativa.
+O projeto Supabase `umpkqbganfxnqzjpfaof` recebeu as migrações `initialize_coaph_monitor` e
+`restrict_internal_rls_trigger_execution`. As sete tabelas estão criadas com RLS ativado,
+sem acesso pelas funções `anon` e `authenticated`. O acesso do painel ocorre pela API PHP.
+`database.postgres.sql` contém a estrutura e os dados iniciais para instalar em um banco vazio;
+não execute esse arquivo novamente no projeto já configurado.
+
+Para completar a conexão da aplicação:
+
+1. Use `api/config.supabase.example.php` como modelo de `api/config.php` (arquivo ignorado pelo Git).
+2. Em Supabase → Connect → Session pooler, copie host, porta, banco e usuário para esse arquivo.
+3. Preencha `DB_PASSWORD` localmente ou defina a variável de ambiente de mesmo nome.
+   A chave publishable não substitui a senha PostgreSQL.
+4. Ative `extension=pdo_pgsql` no PHP. No XAMPP desta máquina já foi ativada; reinicie o Apache para carregar a alteração.
+5. Mantenha uma `CRON_SECRET` aleatória e não vazia. A configuração local já recebeu uma chave gerada.
+6. Execute `npm ci` e `npm run dev`. O proxy local aponta para `http://localhost/monitor-coaph/api`.
+   Para outro servidor, defina `API_PROXY_TARGET` antes de iniciar o Vite.
+7. Teste `/monitor-coaph/api/dashboard.php` pelo Apache e depois execute `php api/cron/monitor-news.php`.
+
+O SSL da conexão PostgreSQL usa `require`. Para verificar também o certificado e o hostname,
+instale a CA do projeto no cliente PostgreSQL e use `DB_SSLMODE=verify-full` na configuração PHP.
+Não há agendamento automático configurado: configure o cron da hospedagem após validar a conexão.
+O RLS protege a Data API do Supabase; a autenticação do painel PHP continua sendo uma etapa separada antes de publicar.
+
 Painel privado em React/Vite com API PHP, MySQL, monitor RSS, classificação contextual, fila de revisão e histórico. Em produção o frontend é estático; não é necessário manter Node.js em execução.
 
 ## Requisitos
