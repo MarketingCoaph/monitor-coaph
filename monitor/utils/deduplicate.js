@@ -1,6 +1,10 @@
 import { normalizeUrl, domainOf } from './url.js';
 import { decodeXml, normalizeText } from './text.js';
 
+const publisherIdentity = value => normalizeText(value)
+  .replace(/(?: com br| com| net br| net| org br| org)$/g, '')
+  .replace(/\s+/g, '');
+
 function identity(item) {
   const urls = [item.original_url, item.canonical_url, item.url].filter(Boolean);
   const direct = urls.find(url => domainOf(url) && domainOf(url) !== 'news.google.com');
@@ -16,6 +20,7 @@ function identity(item) {
   }
   if (/^google/i.test(publisher)) publisher = '';
   const normalizedPublisher = normalizeText(publisher);
+  const publisherKey = publisherIdentity(publisher);
   // Strip only the identified publisher, never arbitrary words from the headline.
   const normalizedTitle = normalizeText(title);
   const suffix = ` ${normalizedPublisher}`;
@@ -28,7 +33,7 @@ function identity(item) {
   }
   return {
     urlKey, direct: Boolean(direct),
-    publisher: normalizedPublisher,
+    publisher: publisherKey,
     headline,
     date: String(item.published_at || '').slice(0, 10),
     story: headline && normalizedPublisher

@@ -19,4 +19,7 @@ assert.equal(deduplicateNews([{ ...google, published_at: '2026-10-16' }, direct]
 const terraDirect = { id: 6, title: "<span class=cartola>Justiça: </span>COAPH destaca decisão sobre gestão interina <span class='sectitle'>Cooperativa afirma que Justiça Federal reconheceu seu interesse</span>", source_name: 'Portal Terra da Luz', url: 'https://portalterradaluz.com.br/principal/justica-coaph-destaca-decisao-sobre-gestao-interina', published_at: '2026-10-16T12:00:00', description: 'Conteúdo completo da matéria' };
 const terraGoogle = { id: 7, title: 'Justiça: COAPH destaca decisão sobre gestão interina', source_name: 'Portal Terra da Luz', url: 'https://news.google.com/rss/articles/TERRA?oc=5', published_at: '2026-10-16T00:00:00', description: 'Resumo do Google Notícias' };
 assert.deepEqual(deduplicateNews([terraGoogle, terraDirect]).map(x => x.id), [6]);
-console.log('Deduplicação: 10 verificações passaram.');
+const portalDirect = { id: 8, title: 'Médico e gestor da Coaph é preso em operação da PF contra desvios na saúde', source_name: 'Portal Ceará Online', url: 'https://portalcearaonline.com.br/policia/materia', published_at: '2026-10-09T12:00:00' };
+const portalGoogle = { ...portalDirect, id: 9, source_name: 'portalcearaonline.com.br', url: 'https://news.google.com/rss/articles/PORTAL?oc=5' };
+assert.deepEqual(deduplicateNews([portalGoogle, portalDirect]).map(x => x.id), [8]);
+console.log('Deduplicação: 11 verificações passaram.');
