@@ -3,3 +3,4 @@ dist/
 api/config.php
 .env
 *.log
+data/

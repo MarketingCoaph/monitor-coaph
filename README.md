@@ -63,3 +63,15 @@ Feeds RSS 2.0 e Atom são aceitos. A fonte Google Notícias para COAPH já é cr
 ## Segurança
 
 O `api/config.php` está ignorado pelo Git. Não inclua credenciais no React. As operações usam prepared statements. Para um painel verdadeiramente privado na internet, também proteja `public_html` com senha pelo painel da Hostinger ou implemente autenticação antes da publicação.
+
+## Motor multifonte local (transição para Supabase)
+
+O desenvolvimento local executa um pipeline modular com Google News RSS, RSS diretos e Serper. Google News e os feeds funcionam sem credenciais. Para ativar a Serper:
+
+1. Copie `.env.example` para `.env`.
+2. Preencha `SERPER_API_KEY` com a chave criada em `https://serper.dev`.
+3. Reinicie `INICIAR_MONITOR.cmd`.
+
+Execute `npm run monitor:test` para imprimir resultados brutos, candidatos únicos, duplicatas, classificação e falhas isoladas. A página **Monitoramento** mostra o mesmo diagnóstico e permite executar uma nova varredura.
+
+Até a migração para o Supabase, os candidatos e a última execução são preservados em `data/monitor-cache.json`, arquivo privado e ignorado pelo Git. Nenhuma chave privada deve ser prefixada com `VITE_`.
