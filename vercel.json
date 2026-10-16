@@ -1,7 +1,4 @@
 {
-  "framework": null,
-  "buildCommand": "echo Using prebuilt production files",
-  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/api/:path*",

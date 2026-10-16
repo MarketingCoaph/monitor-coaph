@@ -35,7 +35,6 @@ jobs:
           mkdir -p publish/api
           cp -R dist/. publish/
           cp .htaccess publish/.htaccess
-          cp vercel.json publish/vercel.json
           rsync -a --exclude='config.php' api/ publish/api/
 
       - name: Atualizar branch production
