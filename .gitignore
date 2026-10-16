@@ -5,3 +5,4 @@ api/config.php
 *.log
 .vercel
 .env*
+supabase/.temp/
