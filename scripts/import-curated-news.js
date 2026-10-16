@@ -19,6 +19,7 @@ const sourceNames = {
   'cearaantenado.com.br': 'Ceará Antenado',
   'cn7.com.br': 'CN7',
   'coxinhanews.com.br': 'Coxinha News',
+  'cydade.net': 'Cydade',
   'diariodonordeste.verdesmares.com.br': 'Diário do Nordeste',
   'diario360.com.br': 'Diário 360 Notícias',
   'g1.globo.com': 'G1 Ceará',
