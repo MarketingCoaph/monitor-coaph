@@ -133,6 +133,10 @@ const byUrl = new Map();
 for (const row of stored) {
   for (const value of [row.url, row.canonical_url].filter(Boolean)) byUrl.set(normalizeUrl(value), row);
 }
+for (const entry of entries) {
+  const replaced = entry.replace_url && byUrl.get(normalizeUrl(entry.replace_url));
+  if (replaced) byUrl.set(entry.url, replaced);
+}
 
 const existing = entries.filter(entry => byUrl.has(entry.url));
 const pending = entries.filter(entry => !byUrl.has(entry.url));
@@ -145,6 +149,8 @@ for (let index = 0; index < toEnrich.length; index += 8) {
 for (const entry of existing) {
   const row = byUrl.get(entry.url);
   assertDb(await db.from('news').update({
+    url: entry.url, canonical_url: entry.url, original_url: entry.url, published_at: entry.published_at,
+    content_hash: crypto.createHash('sha256').update(`manual|${entry.url}`).digest('hex'),
     manual_reviewed: 1, relevance_status: 'related', relevance_score: 100,
     relevance_reason: 'Matéria selecionada manualmente para o levantamento da COAPH.', provider: 'manual',
     ...(enrichment.get(entry.url) || {}),
