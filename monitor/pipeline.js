@@ -8,6 +8,18 @@ import { normalizeUrl, domainOf } from './utils/url.js';
 import { classify } from './classifier.js';
 import { LocalCandidateStore } from './store/localStore.js';
 
+export function candidateKey(candidate) {
+  const normalized = normalizeUrl(candidate.normalized_url || candidate.url);
+  if (normalized) {
+    if (domainOf(normalized) === 'news.google.com') {
+      const parsed = new URL(normalized);
+      return `url:${parsed.hostname}${parsed.pathname.replace(/^\/rss\//, '/')}`;
+    }
+    return `url:${normalized}`;
+  }
+  return `fallback:${normalizeTitle(candidate.source_name)}|${normalizeTitle(candidate.title)}|${String(candidate.published_at || '').slice(0, 10)}`;
+}
+
 export class MonitorPipeline {
   constructor({ serperApiKey = '', store = new LocalCandidateStore(), loadConfig = null } = {}) {
     this.providers = { google: new GoogleNewsRSSProvider(), direct: new DirectRSSProvider(), serper: new SerperProvider(serperApiKey) };
@@ -57,10 +69,8 @@ export class MonitorPipeline {
 
     const unique = new Map(), duplicates = [];
     for (const candidate of candidates) {
-      const urlKey = normalizeUrl(candidate.normalized_url || candidate.url);
-      const titleKey = normalizeTitle(candidate.title);
-      const key = urlKey && !urlKey.includes('news.google.com') ? `url:${urlKey}` : `title:${titleKey}`;
-      const existing = unique.get(key) || [...unique.values()].find(item => normalizeTitle(item.title) === titleKey && domainOf(item.url) === domainOf(candidate.url));
+      const key = candidateKey(candidate);
+      const existing = unique.get(key);
       if (existing) {
         existing.matched_queries = [...new Set([...(existing.matched_queries || []), candidate.search_query].filter(Boolean))];
         existing.providers = [...new Set([...(existing.providers || [existing.provider]), candidate.provider])];
