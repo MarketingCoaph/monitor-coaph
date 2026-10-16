@@ -7,10 +7,13 @@ const legacy = { ...google, id: 3, url: 'https://news.google.com/articles/ABC?hl
 assert.deepEqual(deduplicateNews([google, legacy, direct]).map(x => x.id), [1]);
 assert.equal(deduplicateNews([google, legacy]).length, 1);
 assert.equal(deduplicateNews([direct, { ...direct, url: direct.url + '?utm_source=feed#top' }]).length, 1);
+assert.equal(deduplicateNews([direct, { ...direct, url: direct.url.replace('https:', 'http:') }]).length, 1);
+const queryArticle = { ...direct, url: 'https://cn7.com.br/materia?id=10&pagina=2' };
+assert.equal(deduplicateNews([queryArticle, { ...queryArticle, url: 'https://www.cn7.com.br/materia/?pagina=2&id=10&utm_source=feed' }]).length, 1);
 const otherPortal = { ...direct, id: 4, source_name: 'News Ceará', url: 'https://newsceara.com/materia' };
 assert.equal(deduplicateNews([direct, google, otherPortal]).length, 2);
 const otherArticle = { ...direct, id: 5, url: 'https://cn7.com.br/outra-materia' };
 assert.equal(deduplicateNews([direct, otherArticle, google]).length, 3);
 assert.equal(deduplicateNews([{ ...google, title: 'Outra notícia - CN7', url: 'https://news.google.com/articles/XYZ' }, direct]).length, 2);
 assert.equal(deduplicateNews([{ ...google, published_at: '2026-10-16' }, direct]).length, 2);
-console.log('Deduplicação: 7 verificações passaram.');
+console.log('Deduplicação: 9 verificações passaram.');
