@@ -28,5 +28,17 @@ export function isTrackedNews(news, tracking = {}) {
     return name && !ignoredEntities.has(name) && text.includes(` ${name} `);
   });
 
-  return termMatch || entityMatch;
+  // Algumas reportagens descrevem a mesma operação sem repetir COAPH ou os
+  // nomes dos investigados no título/resumo. Exigimos uma combinação forte de
+  // sinais para preservar essas matérias sem abrir o painel para notícias
+  // genéricas de saúde ou segurança pública.
+  const has = pattern => pattern.test(text);
+  const caseContextMatch =
+    has(/\bcoaptacao\b/) ||
+    (has(/\bbunker\b/) && has(/\bdinheiro\b/) && has(/\b(?:saude|ceara|pf)\b/)) ||
+    (has(/\bempresas? (?:fantasmas?|ficticias?)\b/) && has(/\b(?:saude|ceara|pf)\b/)) ||
+    (has(/\b(?:desvio|desvios|fraude|lavagem)\b/) && has(/\bsaude\b/) && has(/\b(?:ceara|pf|cgu)\b/)) ||
+    (has(/\boperacao\b/) && has(/\bpf\b|\bpolicia federal\b/) && has(/\bsaude\b/) && has(/\bceara\b/));
+
+  return termMatch || entityMatch || caseContextMatch;
 }
