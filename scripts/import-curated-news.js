@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { supabaseAdmin, assertDb } from '../api/_lib/supabase.js';
 import { normalizeUrl, domainOf } from '../monitor/utils/url.js';
+import { normalizeText } from '../monitor/utils/text.js';
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.log('Curadoria manual: ambiente sem credenciais; importação ignorada.');
@@ -66,7 +67,35 @@ function titleFromUrl(url) {
     .replace(/\b\w/g, letter => letter.toLocaleUpperCase('pt-BR'));
 }
 
-async function pageMetadata(entry) {
+function findArticleBody(value) {
+  if (!value || typeof value !== 'object') return '';
+  if (typeof value.articleBody === 'string') return value.articleBody;
+  for (const child of Object.values(value)) {
+    const found = Array.isArray(child)
+      ? child.map(findArticleBody).find(Boolean)
+      : findArticleBody(child);
+    if (found) return found;
+  }
+  return '';
+}
+
+function pageBody(html) {
+  for (const match of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const body = findArticleBody(JSON.parse(match[1]));
+      if (body) return decode(body);
+    } catch {}
+  }
+  const article = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1];
+  return article ? decode(article.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ')) : '';
+}
+
+function mentionedPeople(text, people) {
+  const normalized = ` ${normalizeText(text)} `;
+  return [...new Set(people.filter(person => normalized.includes(` ${normalizeText(person)} `)))];
+}
+
+async function pageMetadata(entry, people) {
   try {
     const response = await fetch(entry.url, {
       redirect: 'follow', signal: AbortSignal.timeout(8000),
@@ -74,6 +103,7 @@ async function pageMetadata(entry) {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const html = await response.text();
+    const body = pageBody(html);
     const candidateTitle = meta(html, 'og:title') || meta(html, 'twitter:title')
       || decode(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]);
     const blocked = /just a moment|attention required|access denied/i.test(candidateTitle);
@@ -81,9 +111,12 @@ async function pageMetadata(entry) {
       title: blocked ? titleFromUrl(entry.url) : candidateTitle || titleFromUrl(entry.url),
       description: meta(html, 'og:description') || meta(html, 'description') || null,
       image_url: meta(html, 'og:image') || null,
+      content_excerpt: body ? body.slice(0, 12000) : null,
+      matched_entities: ['COAPH', ...mentionedPeople(body, people)],
+      analysis_source: body ? 'full_content' : 'metadata',
     };
   } catch {
-    return { title: titleFromUrl(entry.url), description: null, image_url: null };
+    return { title: titleFromUrl(entry.url), description: null, image_url: null, content_excerpt: null, matched_entities: ['COAPH'], analysis_source: 'metadata' };
   }
 }
 
@@ -93,7 +126,9 @@ const entries = [...new Map(input.map(entry => {
   return [url, { ...entry, url }];
 })).values()];
 const db = supabaseAdmin();
-const stored = assertDb(await db.from('news').select('id,url,canonical_url').limit(5000)) || [];
+const entityRows = assertDb(await db.from('case_entities').select('name,type').eq('active', 1)) || [];
+const people = [...new Set([...entityRows.filter(row => normalizeText(row.type) === 'pessoa').map(row => row.name), 'Lúcio Domingos Cesar'])];
+const stored = assertDb(await db.from('news').select('id,url,canonical_url,analysis_source').limit(5000)) || [];
 const byUrl = new Map();
 for (const row of stored) {
   for (const value of [row.url, row.canonical_url].filter(Boolean)) byUrl.set(normalizeUrl(value), row);
@@ -101,31 +136,38 @@ for (const row of stored) {
 
 const existing = entries.filter(entry => byUrl.has(entry.url));
 const pending = entries.filter(entry => !byUrl.has(entry.url));
+const enrichment = new Map();
+const toEnrich = existing.filter(entry => byUrl.get(entry.url).analysis_source !== 'full_content');
+for (let index = 0; index < toEnrich.length; index += 8) {
+  const batch = toEnrich.slice(index, index + 8);
+  for (const item of await Promise.all(batch.map(async entry => [entry.url, await pageMetadata(entry, people)]))) enrichment.set(...item);
+}
 for (const entry of existing) {
   const row = byUrl.get(entry.url);
   assertDb(await db.from('news').update({
     manual_reviewed: 1, relevance_status: 'related', relevance_score: 100,
     relevance_reason: 'Matéria selecionada manualmente para o levantamento da COAPH.', provider: 'manual',
+    ...(enrichment.get(entry.url) || {}),
   }).eq('id', row.id));
 }
 
 const enriched = [];
 for (let index = 0; index < pending.length; index += 8) {
   const batch = pending.slice(index, index + 8);
-  enriched.push(...await Promise.all(batch.map(async entry => ({ ...entry, ...await pageMetadata(entry) }))));
+  enriched.push(...await Promise.all(batch.map(async entry => ({ ...entry, ...await pageMetadata(entry, people) }))));
 }
 const now = new Date().toISOString();
 const rows = enriched.map(entry => {
   const domain = domainOf(entry.url);
   return {
-    title: entry.title, description: entry.description, url: entry.url, canonical_url: entry.url,
+    title: entry.title, description: entry.description, content_excerpt: entry.content_excerpt, url: entry.url, canonical_url: entry.url,
     source_name: sourceNames[domain] || domain, source_domain: domain,
     published_at: entry.published_at, discovered_at: now, image_url: entry.image_url,
     status: 'active', is_new: 1, is_read: 0, category: 'Curadoria manual', search_term: 'COAPH',
     content_hash: crypto.createHash('sha256').update(`manual|${entry.url}`).digest('hex'),
     relevance_score: 100, relevance_status: 'related',
     relevance_reason: 'Matéria selecionada manualmente para o levantamento da COAPH.',
-    analysis_source: 'metadata', matched_entities: ['COAPH'], manual_reviewed: 1,
+    analysis_source: entry.analysis_source, matched_entities: entry.matched_entities, manual_reviewed: 1,
     original_url: entry.url, published_date_source: 'manual', published_date_confirmed: true,
     provider: 'manual',
   };
