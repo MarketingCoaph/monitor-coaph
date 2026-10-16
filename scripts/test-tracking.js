@@ -9,6 +9,10 @@ const tracking = { entities: [
 ] };
 const news = title => ({ title, published_at: '2026-10-10T12:00:00-03:00' });
 
+assert.equal(isTrackedNews({
+  ...news('Reportagem selecionada pelo usuário'), manual_reviewed: 1, provider: 'manual',
+}, tracking), true, 'curadoria manual deve permanecer visível');
+
 for (const title of [
   'COAPH é alvo de operação da Polícia Federal',
   'Operação Coaptação combate grupo suspeito de desvio de recursos',
