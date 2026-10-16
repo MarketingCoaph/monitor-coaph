@@ -2,14 +2,12 @@ import React,{useEffect,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import{BrowserRouter,NavLink,Route,Routes,useLocation}from'react-router-dom';
 import{LayoutDashboard,Newspaper,ScanSearch,Tags,Network,Radio,Activity,Settings,Menu,X,ExternalLink,Check,Plus,Trash2,RefreshCw}from'lucide-react';
+import{isTrackedNews as investigationNews}from'../monitor/utils/tracking.js';
 import'./index.css';
 
 const API='/api';
 async function api(path,options={}){const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const j=await r.json().catch(()=>({success:false,message:'Resposta inválida'}));if(!r.ok||j.success===false)throw new Error(j.message||'Erro na API');return j.data}
 const fmt=d=>d?new Intl.DateTimeFormat('pt-BR',{dateStyle:'short'}).format(new Date(`${d.slice(0,10)}T12:00:00`)):'Data de publicação não confirmada';
-const normalizedMatchText=value=>` ${String(value||'').toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()} `;
-const genericTermWords=new Set('a as o os um uma de da do das dos e ou para por com em no na nos nas sobre que saude hospital medico medica investigacao investigacoes investigar policia federal pf cgu operacao operacoes desvio desvios fraude fraudes lavagem dinheiro recursos publico publicos ceara cearense fortaleza preso prisao prisoes mandado mandados apreensao organizacao criminosa mil reais r'.split(' '));
-const investigationNews=(n,tracking={})=>{const published=new Date((n.published_at||'').replace(' ','T'));if(!Number.isFinite(published.getTime())||published<new Date('2026-10-08T00:00:00'))return false;const text=normalizedMatchText(`${n.title||''} ${n.description||''} ${n.content_excerpt||''}`),terms=(tracking.terms||[]).some(term=>{const words=[...new Set(normalizedMatchText(term).trim().split(/\s+/).filter(word=>word&&!genericTermWords.has(word)))];return words.length>0&&words.every(word=>text.includes(` ${word} `))}),entities=(tracking.entities||[]).some(entity=>!['pf','cgu','policia federal','controladoria geral da uniao'].includes(normalizedMatchText(entity.name).trim())&&text.includes(normalizedMatchText(entity.name)));return terms||entities};
 const badge=s=>({related:'bg-emerald-50 text-emerald-700',possibly_related:'bg-amber-50 text-amber-700',manual_review:'bg-blue-50 text-blue-700',unrelated:'bg-slate-100 text-slate-600'}[s]||'bg-slate-100');
 function Loader(){return <div className="p-12 text-center text-slate-500">Carregando…</div>}
 function ErrorBox({error}){return <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">{error}</div>}
