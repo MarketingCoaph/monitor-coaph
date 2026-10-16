@@ -183,4 +183,4 @@ const rows = enriched.map(entry => {
   };
 });
 if (rows.length) assertDb(await db.from('news').upsert(rows, { onConflict: 'content_hash', ignoreDuplicates: true }));
-console.log(`Curadoria manual: ${existing.length} existentes atualizadas; ${rows.length} novas inseridas; ${entries.length} URLs únicas.`);
+console.log(`Curadoria manual: ${existing.length} existentes atualizadas; ${rows.length} novas inseridas; ${entries.length} URLs únicas (${entries.filter(entry => entry.provider === 'instagram').length} do Instagram).`);
