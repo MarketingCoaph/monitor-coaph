@@ -152,30 +152,33 @@ for (const entry of existing) {
     url: entry.url, canonical_url: entry.url, original_url: entry.url, published_at: entry.published_at,
     content_hash: crypto.createHash('sha256').update(`manual|${entry.url}`).digest('hex'),
     manual_reviewed: 1, relevance_status: 'related', relevance_score: 100,
-    relevance_reason: 'Matéria selecionada manualmente para o levantamento da COAPH.', provider: 'manual',
+    relevance_reason: entry.provider==='instagram'?'Publicação do Instagram selecionada manualmente.':'Matéria selecionada manualmente para o levantamento da COAPH.',
+    provider: entry.provider||'manual', category: entry.provider==='instagram'?'Instagram':'Curadoria manual',
     ...(enrichment.get(entry.url) || {}),
+    ...(entry.source_name?{source_name:entry.source_name}:{}),
+    ...(entry.title?{title:entry.title}:{}), ...(entry.description?{description:entry.description}:{}),
   }).eq('id', row.id));
 }
 
 const enriched = [];
 for (let index = 0; index < pending.length; index += 8) {
   const batch = pending.slice(index, index + 8);
-  enriched.push(...await Promise.all(batch.map(async entry => ({ ...entry, ...await pageMetadata(entry, people) }))));
+  enriched.push(...await Promise.all(batch.map(async entry => {const metadata=await pageMetadata(entry,people);return {...entry,...metadata,title:entry.title||metadata.title,description:entry.description||metadata.description}})));
 }
 const now = new Date().toISOString();
 const rows = enriched.map(entry => {
   const domain = domainOf(entry.url);
   return {
     title: entry.title, description: entry.description, content_excerpt: entry.content_excerpt, url: entry.url, canonical_url: entry.url,
-    source_name: sourceNames[domain] || domain, source_domain: domain,
+    source_name: entry.source_name || sourceNames[domain] || domain, source_domain: domain,
     published_at: entry.published_at, discovered_at: now, image_url: entry.image_url,
-    status: 'active', is_new: 1, is_read: 0, category: 'Curadoria manual', search_term: 'COAPH',
+    status: 'active', is_new: 1, is_read: 0, category: entry.provider==='instagram'?'Instagram':'Curadoria manual', search_term: 'COAPH',
     content_hash: crypto.createHash('sha256').update(`manual|${entry.url}`).digest('hex'),
     relevance_score: 100, relevance_status: 'related',
-    relevance_reason: 'Matéria selecionada manualmente para o levantamento da COAPH.',
+    relevance_reason: entry.provider==='instagram'?'Publicação do Instagram selecionada manualmente.':'Matéria selecionada manualmente para o levantamento da COAPH.',
     analysis_source: entry.analysis_source, matched_entities: entry.matched_entities, manual_reviewed: 1,
     original_url: entry.url, published_date_source: 'manual', published_date_confirmed: true,
-    provider: 'manual',
+    provider: entry.provider||'manual',
   };
 });
 if (rows.length) assertDb(await db.from('news').upsert(rows, { onConflict: 'content_hash', ignoreDuplicates: true }));
