@@ -1,0 +1,25 @@
+name: Executar varredura manual
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Executar coleta protegida no Vercel
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Configure CRON_SECRET nos Actions secrets do repositório."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 300 \
+            --request POST "https://monitor-coaph.vercel.app/api/monitor-run" \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            --header "Content-Type: application/json" \
+            --data '{}'
