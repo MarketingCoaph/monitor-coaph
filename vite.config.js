@@ -9,7 +9,10 @@ export default defineConfig(({mode})=>{const env=loadEnv(mode,process.cwd(),'');
       '/api':{
         target:'https://imprensas.coaph.com.br',
         changeOrigin:true,
-        secure:true
+        secure:true,
+        // Fallback apenas no desenvolvimento local enquanto o .env do
+        // computador não contém a service_role do Supabase.
+        rewrite:path=>path.replace(/^\/api\/(dashboard|news|review|review-action|search-terms|entities|sources|settings)(?=\?|$)/,'/api/$1.php')
       }
     }
   }
