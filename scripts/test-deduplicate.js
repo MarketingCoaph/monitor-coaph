@@ -16,4 +16,7 @@ const otherArticle = { ...direct, id: 5, url: 'https://cn7.com.br/outra-materia'
 assert.equal(deduplicateNews([direct, otherArticle, google]).length, 3);
 assert.equal(deduplicateNews([{ ...google, title: 'Outra notícia - CN7', url: 'https://news.google.com/articles/XYZ' }, direct]).length, 2);
 assert.equal(deduplicateNews([{ ...google, published_at: '2026-10-16' }, direct]).length, 2);
-console.log('Deduplicação: 9 verificações passaram.');
+const terraDirect = { id: 6, title: "<span class=cartola>Justiça: </span>COAPH destaca decisão sobre gestão interina <span class='sectitle'>Cooperativa afirma que Justiça Federal reconheceu seu interesse</span>", source_name: 'Portal Terra da Luz', url: 'https://portalterradaluz.com.br/principal/justica-coaph-destaca-decisao-sobre-gestao-interina', published_at: '2026-10-16T12:00:00', description: 'Conteúdo completo da matéria' };
+const terraGoogle = { id: 7, title: 'Justiça: COAPH destaca decisão sobre gestão interina', source_name: 'Portal Terra da Luz', url: 'https://news.google.com/rss/articles/TERRA?oc=5', published_at: '2026-10-16T00:00:00', description: 'Resumo do Google Notícias' };
+assert.deepEqual(deduplicateNews([terraGoogle, terraDirect]).map(x => x.id), [6]);
+console.log('Deduplicação: 10 verificações passaram.');

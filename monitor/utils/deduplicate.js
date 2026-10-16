@@ -1,11 +1,11 @@
 import { normalizeUrl, domainOf } from './url.js';
-import { normalizeText } from './text.js';
+import { decodeXml, normalizeText } from './text.js';
 
 function identity(item) {
   const urls = [item.original_url, item.canonical_url, item.url].filter(Boolean);
   const direct = urls.find(url => domainOf(url) && domainOf(url) !== 'news.google.com');
   const url = direct || urls[0];
-  let title = String(item.title || '');
+  let title = decodeXml(item.title || '');
   let publisher = String(item.source_name || '');
   if (!direct) {
     const suffix = title.match(/\s+-\s+([^-]+)$/);
@@ -28,9 +28,20 @@ function identity(item) {
   }
   return {
     urlKey, direct: Boolean(direct),
+    publisher: normalizedPublisher,
+    headline,
+    date: String(item.published_at || '').slice(0, 10),
     story: headline && normalizedPublisher
       ? `${normalizedPublisher}|${headline}|${String(item.published_at || '').slice(0, 10)}` : '',
   };
+}
+
+function sameStory(left, right) {
+  if (left.story && left.story === right.story) return true;
+  if (!left.publisher || left.publisher !== right.publisher || !left.date || left.date !== right.date) return false;
+  const shorter = left.headline.length <= right.headline.length ? left.headline : right.headline;
+  const longer = shorter === left.headline ? right.headline : left.headline;
+  return shorter.length >= 32 && (longer === shorter || longer.startsWith(`${shorter} `));
 }
 
 /** Display deduplication only: preserve stored evidence and cross-portal republications. */
@@ -54,7 +65,7 @@ export function deduplicateNews(items) {
   const directGroups = groups.filter(group => group.direct);
   const removed = new Set();
   for (const group of groups.filter(group => !group.direct)) {
-    const matches = directGroups.filter(target => [...group.stories].some(key => target.stories.has(key)));
+    const matches = directGroups.filter(target => group.entries.some(source => target.entries.some(candidate => sameStory(source.info, candidate.info))));
     if (matches.length === 1) {
       matches[0].entries.push(...group.entries);
       removed.add(group);
