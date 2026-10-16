@@ -3,3 +3,5 @@ dist/
 api/config.php
 .env
 *.log
+.vercel
+.env*

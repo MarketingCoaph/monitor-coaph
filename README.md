@@ -1,5 +1,23 @@
 # Monitor de Notícias COAPH
 
+## Coleta multifonte
+
+O pipeline em `monitor/` persiste primeiro todos os candidatos no Supabase e depois os classifica.
+Ele preserva URL agregadora, URL original quando disponível, URL canônica, data de publicação,
+origem da data e instante de captura. As execuções e cada consulta ficam registradas em
+`monitor_runs` e `query_runs`; `monitor_locks` evita execuções simultâneas.
+
+Provedores ativos:
+
+- Google News RSS: todas as consultas ativas, com janela retroativa de três dias.
+- RSS direto: CN7, News Ceará e G1 Ceará.
+- Serper News: suporte implementado; executa cinco consultas em rodízio quando `SERPER_API_KEY` existe no backend.
+
+O endpoint protegido `GET /api/cron/monitor` exige `Authorization: Bearer $CRON_SECRET`.
+No plano Hobby da Vercel, o cron roda uma vez ao dia às 05:00 UTC. Para frequência horária,
+é necessário usar um plano que aceite mais de uma execução diária ou mover o agendamento para outro serviço.
+Nunca coloque `DATABASE_URL`, `SERPER_API_KEY` ou `CRON_SECRET` em variáveis com prefixo `VITE_`.
+
 ## Supabase / PostgreSQL
 
 A API suporta PostgreSQL (`DB_DRIVER=pgsql`) e mantém a configuração MySQL existente como alternativa.
