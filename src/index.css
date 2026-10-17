@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 .summary-card {
+  cursor: pointer;
   min-height: 116px;
   padding: 1rem;
   display: flex;
