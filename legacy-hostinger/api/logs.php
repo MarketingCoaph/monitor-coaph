@@ -1,0 +1,1 @@
+<?php require __DIR__.'/bootstrap.php';respond(db()->query('SELECT l.*,s.name source_name FROM monitor_logs l LEFT JOIN sources s ON s.id=l.source_id ORDER BY executed_at DESC LIMIT 500')->fetchAll());

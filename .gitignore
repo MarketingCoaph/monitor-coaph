@@ -1,0 +1,6 @@
+node_modules/
+dist/
+api/config.php
+.env
+*.log
+data/
