@@ -125,7 +125,13 @@ async function pageMetadata(entry, people) {
   }
 }
 
-const input = JSON.parse(await fs.readFile(new URL('../data/curated-news.json', import.meta.url), 'utf8'));
+const curatedInput = JSON.parse(await fs.readFile(new URL('../data/curated-news.json', import.meta.url), 'utf8'));
+const instagramGroups = JSON.parse(await fs.readFile(new URL('../data/instagram-posts-2026-10.json', import.meta.url), 'utf8'));
+const instagramInput = Object.entries(instagramGroups).flatMap(([date, urls]) => urls.map(url => ({
+  url, published_at: `${date}T12:00:00-03:00`, provider: 'instagram', source_name: 'Instagram',
+  title: url.includes('/p/') ? 'Publicação no Instagram' : 'Reel no Instagram',
+})));
+const input = [...curatedInput, ...instagramInput];
 const entries = [...new Map(input.map(entry => {
   const url = normalizeUrl(entry.url);
   return [url, { ...entry, url }];

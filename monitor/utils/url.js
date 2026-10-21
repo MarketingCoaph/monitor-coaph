@@ -1,4 +1,4 @@
-const TRACKING_PARAMS = new Set(['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid','ref','source']);
+const TRACKING_PARAMS = new Set(['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid','ref','source','hl','__d','igsh','igshid']);
 
 export function normalizeUrl(value = '') {
   try {
@@ -10,6 +10,10 @@ export function normalizeUrl(value = '') {
     url.searchParams.sort();
     url.hostname = url.hostname.toLowerCase().replace(/^www\./, '');
     url.pathname = url.pathname.replace(/\/+$/, '') || '/';
+    if (url.hostname === 'instagram.com') {
+      const post = url.pathname.match(/^\/(?:[^/]+\/)?(p|reel|reels)\/([^/]+)/i);
+      if (post) url.pathname = `/${post[1].toLowerCase()==='p'?'p':'reels'}/${post[2]}`;
+    }
     return url.toString();
   } catch { return value.trim(); }
 }
