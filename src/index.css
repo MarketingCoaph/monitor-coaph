@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+.instagram-button{background:linear-gradient(110deg,#9333ea,#ec4899)}
+
 .summary-card {
   cursor: pointer;
   min-height: 116px;
