@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 .instagram-button{background:linear-gradient(110deg,#9333ea,#ec4899)}
+.instagram-summary-card:hover{border-color:#f0abfc}
 
 .summary-card {
   cursor: pointer;
