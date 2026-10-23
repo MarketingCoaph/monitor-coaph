@@ -1,0 +1,8 @@
+node_modules/
+dist/
+api/config.php
+.env
+*.log
+data/*
+!data/curated-news.json
+!data/instagram-posts-2026-10.json
