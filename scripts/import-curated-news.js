@@ -201,6 +201,19 @@ const rows = enriched.map(entry => {
   };
 });
 if (rows.length) assertDb(await db.from('news').upsert(rows, { onConflict: 'content_hash', ignoreDuplicates: true }));
+for (const entry of entries.filter(item => item.provider !== 'instagram')) {
+  const overrides = {
+    published_at: entry.published_at,
+    published_date_source: 'manual',
+    published_date_confirmed: true,
+    manual_reviewed: 1,
+    ...(entry.source_name ? { source_name: entry.source_name } : {}),
+    ...(entry.title ? { title: entry.title } : {}),
+    ...(entry.description ? { description: entry.description } : {}),
+  };
+  assertDb(await db.from('news').update(overrides).eq('canonical_url', entry.url));
+  assertDb(await db.from('news').update(overrides).eq('url', entry.url));
+}
 const result = { existing: existing.length, inserted: rows.length, unique: entries.length, instagram: entries.filter(entry => entry.provider === 'instagram').length };
 console.log(`Curadoria manual: ${result.existing} existentes atualizadas; ${result.inserted} novas inseridas; ${result.unique} URLs únicas (${result.instagram} do Instagram).`);
 return result;
