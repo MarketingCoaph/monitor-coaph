@@ -162,17 +162,21 @@ for (let index = 0; index < toEnrich.length; index += 8) {
   for (const item of await Promise.all(batch.map(async entry => [entry.url, await pageMetadata(entry, people)]))) enrichment.set(...item);
 }
 for (const entry of existing) {
-  const row = byUrl.get(entry.url);
-  assertDb(await db.from('news').update({
-    url: entry.url, canonical_url: entry.url, original_url: entry.url, published_at: entry.published_at,
-    content_hash: crypto.createHash('sha256').update(`manual|${entry.url}`).digest('hex'),
-    manual_reviewed: 1, relevance_status: 'related', relevance_score: 100,
-    relevance_reason: entry.provider==='instagram'?'Publicação do Instagram selecionada manualmente.':'Matéria selecionada manualmente para o levantamento da COAPH.',
-    provider: entry.provider||'manual', category: entry.provider==='instagram'?'Instagram':'Curadoria manual',
-    ...(enrichment.get(entry.url) || {}),
-    ...(entry.source_name?{source_name:entry.source_name}:{}),
-    ...(entry.title?{title:entry.title}:{}), ...(entry.description?{description:entry.description}:{}),
-  }).eq('id', row.id));
+  const matchingRows = stored.filter(row => [row.url, row.canonical_url]
+    .filter(Boolean).some(value => normalizeUrl(value) === entry.url));
+  const replaced = entry.replace_url && byUrl.get(normalizeUrl(entry.replace_url));
+  const rowsToUpdate = [...new Map([...matchingRows, replaced].filter(Boolean).map(row => [row.id, row])).values()];
+  for (const row of rowsToUpdate) {
+    assertDb(await db.from('news').update({
+      url: entry.url, canonical_url: entry.url, original_url: entry.url, published_at: entry.published_at,
+      manual_reviewed: 1, relevance_status: 'related', relevance_score: 100,
+      relevance_reason: entry.provider==='instagram'?'Publicação do Instagram selecionada manualmente.':'Matéria selecionada manualmente para o levantamento da COAPH.',
+      provider: entry.provider||'manual', category: entry.provider==='instagram'?'Instagram':'Curadoria manual',
+      ...(enrichment.get(entry.url) || {}),
+      ...(entry.source_name?{source_name:entry.source_name}:{}),
+      ...(entry.title?{title:entry.title}:{}), ...(entry.description?{description:entry.description}:{}),
+    }).eq('id', row.id));
+  }
 }
 
 const enriched = [];
