@@ -1,0 +1,25 @@
+name: Importar curadoria
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Importar matérias e Instagram no Supabase
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Configure CRON_SECRET nos Actions secrets do repositório."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 300 \
+            --request POST "https://monitor-coaph.vercel.app/api/import-curated" \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            --header "Content-Type: application/json" \
+            --data '{}'

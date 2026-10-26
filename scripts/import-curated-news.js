@@ -1,13 +1,9 @@
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import { supabaseAdmin, assertDb } from '../api/_lib/supabase.js';
 import { normalizeUrl, domainOf } from '../monitor/utils/url.js';
 import { normalizeText } from '../monitor/utils/text.js';
-
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.log('Curadoria manual: ambiente sem credenciais; importação ignorada.');
-  process.exit(0);
-}
 
 const sourceNames = {
   'agorario.com.br': 'Agora Rio',
@@ -126,6 +122,13 @@ async function pageMetadata(entry, people) {
   }
 }
 
+export async function importCuratedNews() {
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const result = { skipped: true, reason: 'ambiente sem credenciais' };
+  console.log('Curadoria manual: ambiente sem credenciais; importação ignorada.');
+  return result;
+}
+
 const curatedInput = JSON.parse(await fs.readFile(new URL('../data/curated-news.json', import.meta.url), 'utf8'));
 const instagramGroups = JSON.parse(await fs.readFile(new URL('../data/instagram-posts-2026-10.json', import.meta.url), 'utf8'));
 const instagramInput = Object.entries(instagramGroups).flatMap(([date, urls]) => urls.map(url => ({
@@ -194,4 +197,9 @@ const rows = enriched.map(entry => {
   };
 });
 if (rows.length) assertDb(await db.from('news').upsert(rows, { onConflict: 'content_hash', ignoreDuplicates: true }));
-console.log(`Curadoria manual: ${existing.length} existentes atualizadas; ${rows.length} novas inseridas; ${entries.length} URLs únicas (${entries.filter(entry => entry.provider === 'instagram').length} do Instagram).`);
+const result = { existing: existing.length, inserted: rows.length, unique: entries.length, instagram: entries.filter(entry => entry.provider === 'instagram').length };
+console.log(`Curadoria manual: ${result.existing} existentes atualizadas; ${result.inserted} novas inseridas; ${result.unique} URLs únicas (${result.instagram} do Instagram).`);
+return result;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await importCuratedNews();
