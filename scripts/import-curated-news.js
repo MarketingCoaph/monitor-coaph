@@ -39,6 +39,7 @@ const sourceNames = {
   'oestadoce.com.br': 'O Estado CE',
   'opovo.com.br': 'O POVO',
   'policiamentointeligente.com': 'Policiamento Inteligente',
+  'primeiroaqui.jor.br': 'Primeiro Aqui',
   'portalalemdanoticia.com': 'Além da Notícia',
   'portalcearaonline.com.br': 'Portal Ceará Online',
   'portalterradaluz.com.br': 'Portal Terra da Luz',
